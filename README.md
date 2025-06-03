@@ -5,10 +5,12 @@
 ## Features
 
 - 🤖 **AI-powered commit messages**: Automatically generates conventional commit messages using Solar LLM
+- 🧠 **Smart file staging**: AI analyzes untracked files to decide what should be added to git
 - ⚡ **Easy setup**: Simple configuration with your Upstage API key
 - 🔄 **Git compatibility**: Works seamlessly with your existing git workflow
 - 🎛️ **Flexible options**: Interactive mode, manual override, and traditional git commit fallback
 - 📦 **Single binary**: No dependencies, just download and run
+- 🛡️ **Smart filtering**: Automatically skips binary files and large files
 
 ## Installation
 
@@ -48,11 +50,39 @@ Configuration is saved to `~/.config/sgit/config.yaml`.
 
 ## Usage
 
-### Basic Usage
+### Smart Add (New!)
 
-1. Stage your changes as usual:
+AI-powered file staging that analyzes untracked files:
+
+```bash
+# Analyze all untracked files and get AI recommendations
+sgit add --all
+
+# Preview what would be added without actually adding
+sgit add --all --dry-run
+
+# Add files without AI confirmation (based on file type detection only)
+sgit add --all --force
+
+# Traditional behavior: add specific files
+sgit add file1.go file2.js
+```
+
+The smart add command:
+- 📊 **Analyzes file content** using Solar LLM
+- 🚫 **Skips binary files** automatically (images, executables, archives, etc.)
+- 📏 **Skips large files** (> 1MB)
+- 🔍 **Detects sensitive files** (API keys, passwords, etc.)
+- 🏗️ **Identifies build artifacts** and temporary files
+- ✅ **Recommends source files** for version control
+
+### AI-Powered Commits
+
+1. Stage your changes (use smart add or traditional git add):
    ```bash
-   git add .
+   sgit add --all          # Smart AI-powered staging
+   # or
+   git add .               # Traditional staging
    ```
 
 2. Commit with AI-generated message:
@@ -82,21 +112,25 @@ sgit commit -m "your commit message"
 sgit commit --no-ai
 ```
 
-### Examples
+### Complete Workflow Examples
 
 ```bash
-# Stage files and commit with AI-generated message
-git add src/main.go
-sgit commit
+# Complete AI-powered workflow
+sgit add --all              # Smart file staging
+sgit commit                 # AI-generated commit message
 
-# Interactive mode to edit the generated message
-sgit commit -i
+# Preview and review workflow
+sgit add --all --dry-run    # See what would be added
+sgit add --all              # Confirm and add files
+sgit commit -i              # Interactive commit with editable message
 
-# Bypass AI and use manual message
-sgit commit -m "fix: resolve authentication bug"
+# Mixed workflow
+sgit add --all              # AI file selection
+sgit commit -m "manual message"  # Manual commit message
 
-# Use traditional git commit interface
-sgit commit --no-ai
+# Force workflow (no AI, but smart filtering)
+sgit add --all --force      # Add all non-binary files
+sgit commit --no-ai         # Traditional git commit
 ```
 
 ## Configuration
@@ -117,11 +151,43 @@ upstage_model_name: "solar-pro2-preview"
 
 ## How It Works
 
+### Smart Add
+1. **File Discovery**: Finds all untracked files using `git ls-files --others --exclude-standard`
+2. **Binary Detection**: Skips files based on extension and content analysis
+3. **Size Filtering**: Skips files larger than 1MB
+4. **AI Analysis**: Sends file content to Solar LLM for decision
+5. **User Review**: Shows recommendations with reasons
+6. **Execution**: Adds approved files to staging area
+
+### AI Commits
 1. **Diff Analysis**: sgit reads your staged changes using `git diff --cached`
 2. **AI Processing**: Sends the diff to Solar LLM with a specialized prompt
 3. **Message Generation**: Solar LLM generates a conventional commit message
 4. **User Review**: You can review, edit, or approve the generated message
 5. **Git Commit**: Executes `git commit` with the final message
+
+## File Type Detection
+
+sgit automatically handles these file types:
+
+**✅ Always Added:**
+- Source code (.go, .js, .py, .java, .c, .cpp, etc.)
+- Configuration files (.json, .yaml, .toml, .xml, etc.)
+- Documentation (.md, .txt, .rst, etc.)
+- Build files (Makefile, package.json, go.mod, etc.)
+
+**❌ Always Skipped:**
+- Binary executables (.exe, .dll, .so, .dylib)
+- Images (.jpg, .png, .gif, .ico, etc.)
+- Media files (.mp3, .mp4, .avi, etc.)
+- Archives (.zip, .tar, .gz, .rar, etc.)
+- Large files (> 1MB)
+
+**🤖 AI Analyzed:**
+- Unknown file types
+- Files that might contain sensitive data
+- Generated files that could be build artifacts
+- Configuration files that might contain secrets
 
 ## Commit Message Format
 
@@ -151,7 +217,7 @@ sgit generates commit messages following the [Conventional Commits](https://www.
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit your changes (`sgit commit` 😉)
+3. Commit your changes (`sgit add --all && sgit commit` 😉)
 4. Push to the branch (`git push origin feature/amazing-feature`)
 5. Open a Pull Request
 
@@ -167,4 +233,4 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**Note**: This tool requires an Upstage API key and makes API calls to generate commit messages. Please be mindful of your API usage and associated costs. 
+**Note**: This tool requires an Upstage API key and makes API calls to generate commit messages and analyze files. Please be mindful of your API usage and associated costs. 
