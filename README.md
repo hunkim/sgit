@@ -8,6 +8,81 @@
 🤖 **Optional AI Enhancement**: AI features are opt-in and never interfere with standard git operations  
 ⚡ **Zero Configuration Conflicts**: All your existing git aliases, scripts, and workflows continue to work  
 
+## ✨ Quick Example
+
+See the power of sgit in action! Here's what happens when you replace `git` with `sgit`:
+
+### Before (Traditional Git)
+```bash
+$ git add .
+$ git commit -m "fix stuff"
+[main a1b2c3d] fix stuff
+ 3 files changed, 47 insertions(+), 12 deletions(-)
+```
+
+### After (sgit with AI)
+```bash
+$ sgit add --all-ai
+🤖 Analyzing untracked files...
+✓ src/auth/login.js - Core authentication logic (recommended)
+✓ tests/auth.test.js - Test file for authentication (recommended)  
+⚠ temp/debug.log - Log file (skip)
+? Add recommended files? (Y/n) y
+
+$ sgit commit
+🤖 Generating commit message...
+
+Generated commit message:
+feat(auth): implement OAuth2 login with Google integration
+
+Add Google OAuth2 authentication flow with token refresh mechanism.
+Update login component to handle OAuth2 redirects and error states.
+Include comprehensive test coverage for auth service methods.
+
+? Use this commit message? (Y/n) y
+[main e4f5g6h] feat(auth): implement OAuth2 login with Google integration
+ 3 files changed, 47 insertions(+), 12 deletions(-)
+```
+
+**The Result**: Instead of meaningless "fix stuff", you get professional conventional commits that clearly explain what changed and why! 🎉
+
+## 🎯 Why Use sgit?
+
+**Stop writing bad commit messages forever!** sgit transforms your development workflow:
+
+### 🚀 **Instant Professional Commits**
+- **Before**: `git commit -m "fix bug"`
+- **After**: `feat(api): implement rate limiting with Redis backend`
+- No more embarrassing commit history in code reviews!
+
+### 🧠 **Smart File Management**  
+- Automatically detects which files should be committed
+- Skips temporary files, logs, and build artifacts
+- Learns from your project structure
+
+### 📈 **Better Code Reviews**
+- Reviewers immediately understand what changed
+- Conventional commits enable automated changelog generation
+- Professional commit history impresses teammates and employers
+
+### ⚡ **Zero Learning Curve**
+- Use exactly like git: `sgit status`, `sgit push`, `sgit pull`
+- All your existing git knowledge and muscle memory works
+- Existing scripts and aliases continue working
+
+### 🔥 **Real Examples from Users**
+```bash
+# Instead of this... 😞
+git commit -m "updates"
+git commit -m "fix"  
+git commit -m "more changes"
+
+# Get this automatically! ✨
+feat(auth): add JWT token validation middleware
+fix(db): resolve connection pooling memory leak  
+docs(api): update authentication endpoint examples
+```
+
 ## Features
 
 - 🤖 **AI-powered commit messages**: Automatically generates comprehensive conventional commit messages using Solar LLM
@@ -20,6 +95,30 @@
 - 🎛️ **Flexible options**: Interactive mode, manual override, and traditional git commit fallback
 - 📦 **Single binary**: No dependencies, just download and run
 - 🛡️ **Smart filtering**: Automatically skips binary files and large files
+
+## 🚀 Try It Now!
+
+**Ready to upgrade your git experience?** Get started in 30 seconds:
+
+```bash
+# 1. Install sgit (one command)
+curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
+
+# 2. Use it exactly like git
+cd your-project
+sgit status
+sgit add --all-ai     # ✨ AI-powered file staging
+sgit commit           # ✨ AI-generated commit message
+
+# 3. Enjoy professional commits!
+```
+
+**Want to see the difference immediately?** Try these commands in any git repository:
+- `sgit log --ai-analysis` - Get insights about your development patterns  
+- `sgit diff --ai-summary` - Understand what changed in plain English
+- `sgit add --all-ai --dry-run-ai` - See which files AI recommends adding
+
+**No API key?** No problem! Get your free key at [Upstage Console](https://console.upstage.ai/) - takes 2 minutes.
 
 ## Installation
 
