@@ -22,15 +22,9 @@ $ git commit -m "fix stuff"
 
 ### After (sgit with AI)
 ```bash
-$ sgit add --all-ai
-🤖 Analyzing untracked files...
-✓ src/auth/login.js - Core authentication logic (recommended)
-✓ tests/auth.test.js - Test file for authentication (recommended)  
-⚠ temp/debug.log - Log file (skip)
-? Add recommended files? (Y/n) y
-
-$ sgit commit
-🤖 Generating commit message...
+$ sgit commit -a
+🤖 Staging all modified and deleted files...
+🤖 Analyzing changes and generating commit message...
 
 Generated commit message:
 feat(auth): implement OAuth2 login with Google integration
@@ -107,8 +101,7 @@ curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh
 # 2. Use it exactly like git
 cd your-project
 sgit status
-sgit add --all-ai     # ✨ AI-powered file staging
-sgit commit           # ✨ AI-generated commit message
+sgit commit -a           # ✨ Stage files + AI-generated commit message
 
 # 3. Enjoy professional commits!
 ```
@@ -474,8 +467,8 @@ sgit log --ai-analysis         # Analyze development patterns
 sgit add --all-ai --force-ai   # Smart add without confirmation
 sgit commit --skip-editor      # AI message with confirmation
 
-# Ultra-quick workflow (stage all modified files + AI commit)
-sgit commit -a --skip-editor   # Stage all & AI commit in one command
+# Ultra-streamlined workflow (most common)
+sgit commit -a --skip-editor   # Stage all modified files + AI commit in one command
 
 # Development analysis workflow
 sgit log --ai-analysis --ai-timeframe "last sprint"
