@@ -185,7 +185,7 @@ Respond with only the commit message, no explanations.`, diff)
 func (c *Client) GenerateComprehensiveCommitMessage(diff, branch, recentCommits, fileList string) (string, error) {
 	prompt := fmt.Sprintf(`You are an expert software developer who writes excellent commit messages following the Conventional Commits specification.
 
-Analyze the following information to generate a detailed but concise commit message (200-400 characters):
+Your task is to analyze the changes and UNDERSTAND THE DEVELOPER'S INTENTION, not just describe what changed.
 
 === GIT DIFF ===
 %s
@@ -199,24 +199,23 @@ Analyze the following information to generate a detailed but concise commit mess
 === FILES CHANGED ===
 %s
 
+INTENTION ANALYSIS - Consider:
+1. **Purpose**: Why was this change made? Look for clues in code patterns, branch name, recent commits
+2. **Context**: How does this fit into the larger development story?
+3. **Impact**: What problem does this solve or what improvement does it provide?
+
 Generate a commit message that:
 1. Follows conventional commit format: type(scope): description
-2. Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build
-3. Considers the context of recent commits and branch name
-4. Reflects the scope and impact of changes
-5. Uses imperative mood ("add" not "added")
-6. Includes a brief body (2-3 lines) explaining:
-   - What specifically was changed and why
-   - Key files/components affected
-   - Any important technical details or impacts
-7. Mentions breaking changes if applicable
-8. Keep total length between 200-400 characters
+2. CAPTURES THE INTENTION and purpose, not just the mechanics
+3. Uses imperative mood ("add" not "added")
+4. Includes a brief body explaining the WHY and impact
+5. Keep total length between 200-400 characters
 
 Format:
-type(scope): concise but descriptive summary
+type(scope): intention-focused summary explaining WHY
 
-Brief explanation of what was implemented, modified, or fixed.
-Mention key files affected and any important technical considerations.
+Brief explanation of the purpose and impact of this change.
+Focus on the problem solved or improvement made.
 
 BREAKING CHANGE: description if applicable (only if truly breaking)
 
@@ -229,7 +228,7 @@ Respond with only the commit message, no explanations.`, diff, branch, recentCom
 func (c *Client) GenerateComprehensiveCommitMessageStream(diff, branch, recentCommits, fileList string) (string, error) {
 	prompt := fmt.Sprintf(`You are an expert software developer who writes excellent commit messages following the Conventional Commits specification.
 
-Analyze the following information to generate a detailed but concise commit message (200-400 characters):
+Your task is to analyze the changes and UNDERSTAND THE DEVELOPER'S INTENTION, not just describe what changed.
 
 === GIT DIFF ===
 %s
@@ -243,24 +242,62 @@ Analyze the following information to generate a detailed but concise commit mess
 === FILES CHANGED ===
 %s
 
+INTENTION ANALYSIS - Consider these aspects:
+1. **Purpose**: Why was this change made? (bug fix, new feature, improvement, refactor, etc.)
+2. **Context Clues**: 
+   - Branch name patterns (feature/, fix/, hotfix/, etc.)
+   - File patterns (test files = testing, config files = configuration, etc.)
+   - Code patterns (adding validation = security/reliability, adding logs = debugging, etc.)
+3. **Development Flow**: 
+   - How does this fit with recent commits?
+   - Is this part of a larger feature or fix?
+   - Is this completing something started earlier?
+4. **Impact Intent**:
+   - Performance improvement? Security enhancement? User experience? Developer experience?
+   - Breaking changes? Backward compatibility? API changes?
+5. **Technical Intention**:
+   - Architecture improvements? Code quality? Maintainability?
+   - Integration with external systems? Internal refactoring?
+
+REASONING PATTERNS TO LOOK FOR:
+- Adding tests → ensuring reliability/quality
+- Adding error handling → improving robustness  
+- Adding validation → security/data integrity
+- Adding logging → debugging/monitoring
+- Changing config → deployment/environment setup
+- Updating docs → knowledge sharing/onboarding
+- Refactoring → code quality/maintainability
+- Adding endpoints → new functionality
+- Fixing types → type safety/correctness
+- Adding dependencies → leveraging external capabilities
+
 Generate a commit message that:
 1. Follows conventional commit format: type(scope): description
 2. Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build
-3. Considers the context of recent commits and branch name
-4. Reflects the scope and impact of changes
-5. Uses imperative mood ("add" not "added")
-6. Includes a brief body (2-3 lines) explaining:
-   - What specifically was changed and why
-   - Key files/components affected
-   - Any important technical details or impacts
-7. Mentions breaking changes if applicable
-8. Keep total length between 200-400 characters
+3. CAPTURES THE INTENTION, not just the mechanics
+4. Uses imperative mood ("add" not "added")
+5. Includes a brief body (2-3 lines) explaining:
+   - WHY this change was made (the intention/purpose)
+   - WHAT problem it solves or improvement it provides
+   - HOW it impacts users/developers/system
+6. Mentions breaking changes if applicable
+7. Keep total length between 200-400 characters
+
+Examples of intention-focused messages:
+❌ "feat(api): add new endpoint" (describes mechanics)
+✅ "feat(api): enable user profile customization" (describes intention)
+
+❌ "fix(db): change query" (describes mechanics)  
+✅ "fix(db): prevent memory leak in long-running queries" (describes intention)
+
+❌ "refactor(auth): update code" (describes mechanics)
+✅ "refactor(auth): simplify token validation for better maintainability" (describes intention)
 
 Format:
-type(scope): concise but descriptive summary
+type(scope): intention-focused summary that explains WHY
 
-Brief explanation of what was implemented, modified, or fixed.
-Mention key files affected and any important technical considerations.
+Brief explanation of the purpose and impact of this change.
+Focus on the problem solved or improvement made, not just what files changed.
 
 BREAKING CHANGE: description if applicable (only if truly breaking)
 
