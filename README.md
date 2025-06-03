@@ -89,6 +89,7 @@ docs(api): update authentication endpoint examples
 - 📦 **Single binary**: No dependencies, just download and run
 - 🛡️ **Smart filtering**: Automatically skips binary files and large files
 - ✨ **Beautiful UX**: Streaming AI with real-time animations and elegant spinners
+- 🎯 **Smart Defaults**: AI-powered analysis by default for `sgit log` and `sgit diff`
 
 ## 🚀 Try It Now!
 
