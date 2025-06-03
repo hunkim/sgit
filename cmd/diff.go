@@ -13,15 +13,15 @@ import (
 )
 
 var (
-	diffAISummary bool
+	diffNoAI bool
 )
 
 // diffCmd represents the diff command
 var diffCmd = &cobra.Command{
 	Use:   "diff [files...]",
-	Short: "Show changes with optional AI summary",
-	Long: `Show changes between commits, commit and working tree, etc.
-Supports all git diff options for full compatibility, with optional AI-powered summaries.`,
+	Short: "Show changes with AI summary (default)",
+	Long: `Show changes between commits, commit and working tree, etc. with AI-powered summaries by default.
+Supports all git diff options for full compatibility. Use --no-ai to disable AI analysis.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runDiff(cmd, args); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -34,7 +34,7 @@ func init() {
 	rootCmd.AddCommand(diffCmd)
 	
 	// AI-specific flags
-	diffCmd.Flags().BoolVar(&diffAISummary, "ai-summary", false, "provide AI-powered summary of changes")
+	diffCmd.Flags().BoolVar(&diffNoAI, "no-ai", false, "disable AI summary and use standard git diff")
 	
 	// Standard git diff flags - we'll pass these through to git
 	diffCmd.Flags().Bool("cached", false, "show diff of staged changes")
@@ -64,8 +64,8 @@ func runDiff(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("not a git repository")
 	}
 
-	// If AI summary is requested, we need to get the diff first
-	if diffAISummary {
+	// Use AI summary by default, unless --no-ai is specified
+	if !diffNoAI {
 		return runDiffWithAISummary(cmd, args)
 	}
 
@@ -95,21 +95,19 @@ func runDiffWithAISummary(cmd *cobra.Command, args []string) error {
 	fmt.Println(diff)
 	fmt.Println()
 
-	// Generate AI summary
+	// Generate AI summary with streaming
 	apiKey := viper.GetString("upstage_api_key")
 	modelName := viper.GetString("upstage_model_name")
 	
 	client := solar.NewClient(apiKey, modelName)
 	
-	fmt.Println("Generating AI summary...")
-	summary, err := client.SummarizeDiff(diff)
+	fmt.Println("=== AI SUMMARY ===")
+	_, err = client.SummarizeDiffStream(diff)
 	if err != nil {
 		return fmt.Errorf("error generating diff summary: %v", err)
 	}
 
-	fmt.Println("=== AI SUMMARY ===")
-	fmt.Println(summary)
-
+	fmt.Println() // Add newline after streaming output
 	return nil
 }
 
@@ -120,7 +118,7 @@ func executeGitDiffPassthrough(cobraCmd *cobra.Command, args []string) error {
 	// Add all the flags that were set (excluding our custom AI flags)
 	cobraCmd.Flags().Visit(func(flag *pflag.Flag) {
 		flagName := flag.Name
-		if flagName == "ai-summary" {
+		if flagName == "no-ai" {
 			return // Skip our custom AI flags
 		}
 		
@@ -154,7 +152,7 @@ func getGitDiffOutput(cmd *cobra.Command, args []string) (string, error) {
 	// Add all the flags that were set (excluding our custom AI flags)
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		flagName := flag.Name
-		if flagName == "ai-summary" {
+		if flagName == "no-ai" {
 			return // Skip our custom AI flags
 		}
 		

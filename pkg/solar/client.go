@@ -343,6 +343,95 @@ Be concise but insightful.`, timeframe, logOutput)
 	return c.GenerateResponse(prompt)
 }
 
+// AnalyzeLogStream generates insights from the git log with streaming
+func (c *Client) AnalyzeLogStream(logOutput, timeframe string) (string, error) {
+	prompt := fmt.Sprintf(`Analyze the following git log (%s) and provide detailed insights:
+
+%s
+
+DEVELOPMENT ANALYSIS - Provide comprehensive insights:
+
+1. **📊 Activity Summary**: 
+   - Overall development velocity and patterns
+   - Peak activity periods and quiet phases
+   - Commit frequency and distribution
+
+2. **🚀 Key Features & Improvements**:
+   - Major features implemented
+   - Significant improvements made
+   - New capabilities added
+
+3. **🐛 Bug Fixes & Maintenance**:
+   - Critical fixes applied
+   - Performance improvements
+   - Security enhancements
+
+4. **👥 Contributor Insights**:
+   - Active contributors and their focus areas
+   - Collaboration patterns
+   - Expertise distribution
+
+5. **🔍 Development Patterns**:
+   - Coding practices and conventions
+   - Testing and documentation habits
+   - Release and deployment patterns
+
+6. **💡 Recommendations**:
+   - Areas for improvement
+   - Suggested next steps
+   - Technical debt considerations
+
+Be insightful and actionable. Focus on trends, patterns, and meaningful observations.`, timeframe, logOutput)
+
+	return c.GenerateResponseStream(prompt)
+}
+
+// SummarizeDiffStream generates a summary of the git diff with streaming
+func (c *Client) SummarizeDiffStream(diff string) (string, error) {
+	prompt := fmt.Sprintf(`Analyze the following git diff and provide a comprehensive, structured summary:
+
+%s
+
+CHANGE ANALYSIS - Provide detailed insights:
+
+1. **📋 Summary**: 
+   - High-level overview of what changed
+   - Primary purpose and intention of changes
+
+2. **📁 Files & Components**:
+   - Main files modified, added, or removed
+   - Components and modules affected
+   - Architecture areas impacted
+
+3. **🔄 Type of Changes**:
+   - New features implemented
+   - Bug fixes applied  
+   - Refactoring and improvements
+   - Configuration or documentation updates
+
+4. **⚡ Impact Assessment**:
+   - Functional changes and new capabilities
+   - Performance implications
+   - User experience impacts
+   - Developer experience changes
+
+5. **🎯 Technical Details**:
+   - Key algorithms or logic changes
+   - API modifications
+   - Database or schema changes
+   - Dependencies added or updated
+
+6. **⚠️ Important Notes**:
+   - Breaking changes (if any)
+   - Migration requirements
+   - Testing considerations
+   - Deployment implications
+
+Be thorough yet concise. Focus on what matters most for understanding the change.`, diff)
+
+	return c.GenerateResponseStream(prompt)
+}
+
 // AnalyzeMergeConflicts provides guidance for resolving merge conflicts
 func (c *Client) AnalyzeMergeConflicts(conflictFiles string) (string, error) {
 	prompt := fmt.Sprintf(`Analyze the following merge conflict information and provide resolution guidance:

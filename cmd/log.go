@@ -13,16 +13,16 @@ import (
 )
 
 var (
-	logAIAnalysis bool
+	logNoAI       bool
 	logTimeframe  string
 )
 
 // logCmd represents the log command
 var logCmd = &cobra.Command{
 	Use:   "log [options]",
-	Short: "Show commit logs with optional AI analysis",
-	Long: `Show commit logs with optional AI-powered analysis of development patterns.
-Supports all git log options for full compatibility.`,
+	Short: "Show commit logs with AI analysis (default)",
+	Long: `Show commit logs with AI-powered analysis of development patterns by default.
+Supports all git log options for full compatibility. Use --no-ai to disable AI analysis.`,
 	Run: func(cmd *cobra.Command, args []string) {
 		if err := runLog(cmd, args); err != nil {
 			fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -35,7 +35,7 @@ func init() {
 	rootCmd.AddCommand(logCmd)
 	
 	// AI-specific flags
-	logCmd.Flags().BoolVar(&logAIAnalysis, "ai-analysis", false, "provide AI-powered analysis of commit history")
+	logCmd.Flags().BoolVar(&logNoAI, "no-ai", false, "disable AI analysis and use standard git log")
 	logCmd.Flags().StringVar(&logTimeframe, "ai-timeframe", "last 20 commits", "timeframe description for AI analysis")
 	
 	// Standard git log flags - we'll pass these through to git
@@ -72,7 +72,7 @@ func runLog(cmd *cobra.Command, args []string) error {
 	}
 
 	// If AI analysis is requested, we need to get the log first
-	if logAIAnalysis {
+	if !logNoAI {
 		return runLogWithAIAnalysis(cmd, args)
 	}
 
@@ -102,21 +102,19 @@ func runLogWithAIAnalysis(cmd *cobra.Command, args []string) error {
 	fmt.Println(logOutput)
 	fmt.Println()
 
-	// Generate AI analysis
+	// Generate AI analysis with streaming
 	apiKey := viper.GetString("upstage_api_key")
 	modelName := viper.GetString("upstage_model_name")
 	
 	client := solar.NewClient(apiKey, modelName)
 	
-	fmt.Println("Generating AI analysis...")
-	analysis, err := client.AnalyzeLog(logOutput, logTimeframe)
+	fmt.Println("=== AI ANALYSIS ===")
+	_, err = client.AnalyzeLogStream(logOutput, logTimeframe)
 	if err != nil {
 		return fmt.Errorf("error generating log analysis: %v", err)
 	}
 
-	fmt.Println("=== AI ANALYSIS ===")
-	fmt.Println(analysis)
-
+	fmt.Println() // Add newline after streaming output
 	return nil
 }
 
@@ -127,7 +125,7 @@ func executeGitLogPassthrough(cobraCmd *cobra.Command, args []string) error {
 	// Add all the flags that were set (excluding our custom AI flags)
 	cobraCmd.Flags().Visit(func(flag *pflag.Flag) {
 		flagName := flag.Name
-		if flagName == "ai-analysis" || flagName == "ai-timeframe" {
+		if flagName == "no-ai" || flagName == "ai-timeframe" {
 			return // Skip our custom AI flags
 		}
 		
@@ -165,7 +163,7 @@ func getGitLogOutput(cmd *cobra.Command, args []string) (string, error) {
 	// Add all the flags that were set (excluding our custom AI flags)
 	cmd.Flags().Visit(func(flag *pflag.Flag) {
 		flagName := flag.Name
-		if flagName == "ai-analysis" || flagName == "ai-timeframe" {
+		if flagName == "no-ai" || flagName == "ai-timeframe" {
 			return // Skip our custom AI flags
 		}
 		

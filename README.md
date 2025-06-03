@@ -80,14 +80,15 @@ docs(api): update authentication endpoint examples
 
 - 🤖 **AI-powered commit messages**: Automatically generates comprehensive conventional commit messages using Solar LLM
 - 🧠 **Smart file staging**: AI analyzes untracked files to decide what should be added to git  
-- 📊 **Intelligent diff summaries**: AI explains what changed in your diffs
-- 📈 **Log analysis**: AI analyzes commit history patterns and provides insights
+- 📊 **Intelligent diff summaries**: AI explains what changed in your diffs (streaming by default!)
+- 📈 **Log analysis**: AI analyzes commit history patterns and provides insights (streaming by default!)
 - 🔀 **Merge assistance**: AI helps resolve conflicts and generates merge commit messages
 - 🔄 **Full Git Compatibility**: Supports ALL git commands and options - just replace `git` with `sgit`
 - ⚡ **Easy setup**: Simple configuration with your Upstage API key
 - 🎛️ **Flexible options**: Interactive mode, manual override, and traditional git commit fallback
 - 📦 **Single binary**: No dependencies, just download and run
 - 🛡️ **Smart filtering**: Automatically skips binary files and large files
+- ✨ **Beautiful UX**: Streaming AI with real-time animations and elegant spinners
 
 ## 🚀 Try It Now!
 
@@ -106,9 +107,9 @@ sgit commit -a           # ✨ Stage files + AI-generated commit message
 ```
 
 **Want to see the difference immediately?** Try these commands in any git repository:
-- `sgit log --ai-analysis` - Get insights about your development patterns  
-- `sgit diff --ai-summary` - Understand what changed in plain English
-- `sgit add --all-ai --dry-run-ai` - See which files AI recommends adding
+- `sgit log` - Get AI insights about your development patterns (streaming!)
+- `sgit diff` - Understand what changed in plain English (streaming!)
+- `sgit commit -a` - Stage files + AI commit in one command
 
 **No API key?** No problem! Get your free key at [Upstage Console](https://console.upstage.ai/) - takes 2 minutes.
 
@@ -395,43 +396,42 @@ sgit commit --no-ai             # Explicit no-AI flag
 
 ### 3. Intelligent Diff (`sgit diff`)
 
-Enhanced diff with AI-powered summaries:
+Enhanced diff with AI-powered summaries by default:
 
 ```bash
-# Show diff with AI-powered summary
-sgit diff --ai-summary
-
-# Works with all git diff options
-sgit diff --cached --ai-summary
-sgit diff HEAD~1 --ai-summary
-sgit diff --stat --ai-summary
-
-# Traditional git diff (no AI)
+# Show diff with AI-powered summary (default behavior)
 sgit diff
+
+# Works with all git diff options + AI analysis
 sgit diff --cached
 sgit diff HEAD~1
+sgit diff --stat
+
+# Traditional git diff (no AI)
+sgit diff --no-ai
+sgit diff --cached --no-ai
 ```
 
 ### 4. Log Analysis (`sgit log`)
 
-Commit history analysis with AI insights:
+Commit history analysis with AI insights by default:
 
 ```bash
-# Show log with AI-powered analysis
-sgit log --ai-analysis
+# Show log with AI-powered analysis (default behavior)
+sgit log
 
 # Analyze specific timeframe
-sgit log --ai-analysis --ai-timeframe "last 2 weeks"
+sgit log --ai-timeframe "last 2 weeks"
 
-# Works with all git log options
-sgit log --oneline --ai-analysis
-sgit log --since="1 week ago" --ai-analysis
-sgit log --author="John" --ai-analysis
+# Works with all git log options + AI analysis
+sgit log --oneline
+sgit log --since="1 week ago"
+sgit log --author="John"
 
 # Traditional git log (no AI)
-sgit log
-sgit log --oneline
-sgit log --graph
+sgit log --no-ai
+sgit log --oneline --no-ai
+sgit log --graph --no-ai
 ```
 
 ### 5. Merge Assistance (`sgit merge`)
