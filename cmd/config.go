@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"fmt"
 	"os"
+	"os/signal"
 	"path/filepath"
 	"strings"
 	"syscall"
@@ -36,6 +37,13 @@ func readAPIKeyWithVisualFeedback() (string, error) {
 		// Read one character at a time
 		if char, err = readSingleChar(); err != nil {
 			return "", err
+		}
+
+		// Handle Ctrl-C (ASCII 3)
+		if char == 3 {
+			fmt.Println("\n\n⚠️  Configuration cancelled by user")
+			fmt.Println("💡 Run 'sgit config' again anytime to set up your configuration")
+			os.Exit(0)
 		}
 
 		// Handle Enter (newline)
@@ -84,41 +92,112 @@ func readSingleChar() (byte, error) {
 }
 
 func setupConfig() {
+	// Set up signal handling for Ctrl-C
+	sigChan := make(chan os.Signal, 1)
+	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
+	
+	// Handle interrupt in a goroutine
+	go func() {
+		<-sigChan
+		fmt.Println("\n\n⚠️  Configuration cancelled by user")
+		fmt.Println("💡 Run 'sgit config' again anytime to set up your configuration")
+		os.Exit(0)
+	}()
+	
 	reader := bufio.NewReader(os.Stdin)
 
 	fmt.Println("🔧 sgit Configuration Setup")
 	fmt.Println("Your API key will be stored locally and securely in ~/.config/sgit/config.yaml")
+	fmt.Println("💡 Press Ctrl-C anytime to cancel")
 	fmt.Println()
+
+	// Check existing configuration
+	existingAPIKey := viper.GetString("upstage_api_key")
+	existingModelName := viper.GetString("upstage_model_name")
+	existingLanguage := viper.GetString("language")
+
+	var apiKeyStr string
+	var err error
 
 	// Get API key
 	fmt.Println("(get one at https://console.upstage.ai/)")
-	fmt.Print("Enter your Upstage API key: ")
+	if existingAPIKey != "" {
+		// Show masked existing API key
+		maskedKey := ""
+		if len(existingAPIKey) >= 3 {
+			maskedKey = existingAPIKey[:3] + strings.Repeat("*", len(existingAPIKey)-3)
+		} else {
+			maskedKey = strings.Repeat("*", len(existingAPIKey))
+		}
+		fmt.Printf("Enter your Upstage API key (current: %s, press Enter to keep): ", maskedKey)
+		
+		// For existing keys, use simple input to allow easy Enter-to-keep
+		input, err := reader.ReadString('\n')
+		if err != nil {
+			// Check if it's an interrupt
+			if strings.Contains(err.Error(), "interrupt") {
+				fmt.Println("\n\n⚠️  Configuration cancelled by user")
+				fmt.Println("💡 Run 'sgit config' again anytime to set up your configuration")
+				os.Exit(0)
+			}
+			fmt.Printf("Error reading API key: %v\n", err)
+			return
+		}
+		input = strings.TrimSpace(input)
+		
+		if input == "" {
+			apiKeyStr = existingAPIKey
+			fmt.Println("✓ Keeping existing API key")
+		} else {
+			apiKeyStr = input
+		}
+	} else {
+		fmt.Print("Enter your Upstage API key: ")
+		apiKeyStr, err = readAPIKeyWithVisualFeedback()
+		if err != nil {
+			fmt.Printf("\nError reading API key: %v\n", err)
+			return
+		}
+		
+		if apiKeyStr == "" {
+			fmt.Println("API key cannot be empty")
+			return
+		}
+	}
+
+	// Get model name with existing value
+	defaultModel := "solar-pro2-preview"
+	if existingModelName != "" {
+		fmt.Printf("Enter model name (current: %s, press Enter to keep): ", existingModelName)
+	} else {
+		fmt.Printf("Enter model name (default: %s): ", defaultModel)
+	}
 	
-	apiKeyStr, err := readAPIKeyWithVisualFeedback()
-	if err != nil {
-		fmt.Printf("\nError reading API key: %v\n", err)
-		return
-	}
-
-	if apiKeyStr == "" {
-		fmt.Println("API key cannot be empty")
-		return
-	}
-
-	// Get model name with default
-	fmt.Print("Enter model name (default: solar-pro2-preview): ")
 	modelName, err := reader.ReadString('\n')
 	if err != nil {
+		// Check if it's an interrupt
+		if strings.Contains(err.Error(), "interrupt") {
+			fmt.Println("\n\n⚠️  Configuration cancelled by user")
+			fmt.Println("💡 Run 'sgit config' again anytime to set up your configuration")
+			os.Exit(0)
+		}
 		fmt.Printf("Error reading model name: %v\n", err)
 		return
 	}
 	modelName = strings.TrimSpace(modelName)
+	
+	// Use existing value if empty, otherwise use default
 	if modelName == "" {
-		modelName = "solar-pro2-preview"
+		if existingModelName != "" {
+			modelName = existingModelName
+			fmt.Printf("✓ Keeping existing model: %s\n", modelName)
+		} else {
+			modelName = defaultModel
+		}
 	}
 
-	// Get language preference with default
-	fmt.Println("Available languages:")
+	// Get language preference with existing value
+	fmt.Println("\nAvailable languages:")
 	fmt.Println("  en - English")
 	fmt.Println("  ko - Korean (한국어)")
 	fmt.Println("  ja - Japanese (日本語)")
@@ -126,15 +205,47 @@ func setupConfig() {
 	fmt.Println("  es - Spanish (Español)")
 	fmt.Println("  fr - French (Français)")
 	fmt.Println("  de - German (Deutsch)")
-	fmt.Print("Enter language code (default: en): ")
+	
+	if existingLanguage != "" {
+		validLanguages := map[string]string{
+			"en": "English",
+			"ko": "Korean",
+			"ja": "Japanese",
+			"zh": "Chinese",
+			"es": "Spanish",
+			"fr": "French",
+			"de": "German",
+		}
+		currentLangName := validLanguages[existingLanguage]
+		if currentLangName == "" {
+			currentLangName = existingLanguage
+		}
+		fmt.Printf("Enter language code (current: %s - %s, press Enter to keep): ", existingLanguage, currentLangName)
+	} else {
+		fmt.Print("Enter language code (default: en): ")
+	}
+	
 	language, err := reader.ReadString('\n')
 	if err != nil {
+		// Check if it's an interrupt
+		if strings.Contains(err.Error(), "interrupt") {
+			fmt.Println("\n\n⚠️  Configuration cancelled by user")
+			fmt.Println("💡 Run 'sgit config' again anytime to set up your configuration")
+			os.Exit(0)
+		}
 		fmt.Printf("Error reading language: %v\n", err)
 		return
 	}
 	language = strings.TrimSpace(strings.ToLower(language))
+	
+	// Use existing value if empty, otherwise use default
 	if language == "" {
-		language = "en"
+		if existingLanguage != "" {
+			language = existingLanguage
+			fmt.Printf("✓ Keeping existing language: %s\n", language)
+		} else {
+			language = "en"
+		}
 	}
 	
 	// Validate language code
@@ -169,7 +280,10 @@ func setupConfig() {
 		return
 	}
 
-	fmt.Printf("✅ Configuration saved securely to %s\n", configFile)
+	fmt.Printf("\n✅ Configuration saved securely to %s\n", configFile)
+	
+	// Stop listening for signals since we're done
+	signal.Stop(sigChan)
 }
 
 // ensureConfiguration checks if configuration exists and runs setup if needed
