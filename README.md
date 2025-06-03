@@ -36,7 +36,7 @@ Include comprehensive test coverage for authentication service.
 
 ```bash
 # 1. Install
-curl -fsSL https://bit.ly/sgit-install | bash
+curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
 
 # 2. Use like git, but better
 sgit commit -a        # 🤖 AI writes your commit message
@@ -74,7 +74,7 @@ sgit log             # 📈 AI analyzes your patterns
 
 **🚀 Recommended (includes tab completion):**
 ```bash
-curl -fsSL https://bit.ly/sgit-install | bash
+curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
 ```
 
 **🍺 Homebrew:**
@@ -220,5 +220,5 @@ MIT License - see [LICENSE](LICENSE) file.
 > **Ready to transform your git workflow?** Try sgit today and never write "fix stuff" again! 🚀
 >
 > ```bash
-> curl -fsSL https://bit.ly/sgit-install | bash
+> curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
 > ``` 
