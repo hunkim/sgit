@@ -83,6 +83,8 @@ docs(api): update authentication endpoint examples
 - 📊 **Intelligent diff summaries**: AI explains what changed in your diffs (streaming by default!)
 - 📈 **Log analysis**: AI analyzes commit history patterns and provides insights (streaming by default!)
 - 🔀 **Merge assistance**: AI helps resolve conflicts and generates merge commit messages
+- 🌍 **Multi-language support**: AI responses in Korean, Japanese, Chinese, Spanish, French, German, and English
+- ⌨️ **Tab completion**: Intelligent auto-complete for commands, flags, and language codes (bash/zsh/fish)
 - 🔄 **Full Git Compatibility**: Supports ALL git commands and options - just replace `git` with `sgit`
 - ⚡ **Easy setup**: Simple configuration with your Upstage API key
 - 🎛️ **Flexible options**: Interactive mode, manual override, and traditional git commit fallback
@@ -120,10 +122,21 @@ sgit provides multiple installation methods to suit different preferences and pl
 
 ### 🚀 Quick Install (Recommended)
 
-One-liner installation script that automatically detects your platform:
+One-liner installation script that automatically detects your platform and sets up tab completion:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
+```
+
+**What's included:**
+- ✅ Binary installation to your PATH
+- ✅ Tab completion for all shells (bash/zsh/fish)
+- ✅ Shell profile configuration
+- ✅ Language support setup
+
+**Skip completion setup:**
+```bash
+curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash -s -- --no-completion
 ```
 
 ### 🍺 Homebrew (macOS & Linux)

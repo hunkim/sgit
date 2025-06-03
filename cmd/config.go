@@ -117,9 +117,48 @@ func setupConfig() {
 		modelName = "solar-pro2-preview"
 	}
 
+	// Get language preference with default
+	fmt.Println("Available languages:")
+	fmt.Println("  en - English")
+	fmt.Println("  ko - Korean (한국어)")
+	fmt.Println("  ja - Japanese (日本語)")
+	fmt.Println("  zh - Chinese (中文)")
+	fmt.Println("  es - Spanish (Español)")
+	fmt.Println("  fr - French (Français)")
+	fmt.Println("  de - German (Deutsch)")
+	fmt.Print("Enter language code (default: en): ")
+	language, err := reader.ReadString('\n')
+	if err != nil {
+		fmt.Printf("Error reading language: %v\n", err)
+		return
+	}
+	language = strings.TrimSpace(strings.ToLower(language))
+	if language == "" {
+		language = "en"
+	}
+	
+	// Validate language code
+	validLanguages := map[string]string{
+		"en": "English",
+		"ko": "Korean",
+		"ja": "Japanese",
+		"zh": "Chinese",
+		"es": "Spanish",
+		"fr": "French",
+		"de": "German",
+	}
+	
+	if _, valid := validLanguages[language]; !valid {
+		fmt.Printf("Invalid language code '%s'. Defaulting to 'en' (English)\n", language)
+		language = "en"
+	} else {
+		fmt.Printf("Selected language: %s (%s)\n", language, validLanguages[language])
+	}
+
 	// Save configuration
 	viper.Set("upstage_api_key", apiKeyStr)
 	viper.Set("upstage_model_name", modelName)
+	viper.Set("language", language)
 
 	// Get config file path
 	configDir := filepath.Join(os.Getenv("HOME"), ".config", "sgit")

@@ -12,6 +12,7 @@ import (
 )
 
 var cfgFile string
+var langFlag string
 var version = "dev" // Will be set during build with -ldflags
 
 // rootCmd represents the base command when called without any subcommands
@@ -76,11 +77,52 @@ func Execute() {
 	}
 }
 
+// getEffectiveLanguage returns the language to use, considering both config and flag
+func getEffectiveLanguage() string {
+	// Command-line flag takes precedence
+	if langFlag != "" {
+		lang := strings.ToLower(strings.TrimSpace(langFlag))
+		if isValidLanguageCode(lang) {
+			return lang
+		}
+		fmt.Fprintf(os.Stderr, "Warning: Invalid language code '%s'. Using default 'en'.\n", langFlag)
+		return "en"
+	}
+	
+	// Fall back to config file setting
+	configLang := viper.GetString("language")
+	if configLang != "" {
+		lang := strings.ToLower(strings.TrimSpace(configLang))
+		if isValidLanguageCode(lang) {
+			return lang
+		}
+		return "en"
+	}
+	
+	// Default to English
+	return "en"
+}
+
+// isValidLanguageCode checks if the provided language code is supported
+func isValidLanguageCode(code string) bool {
+	validCodes := map[string]bool{
+		"en": true,
+		"ko": true,
+		"ja": true,
+		"zh": true,
+		"es": true,
+		"fr": true,
+		"de": true,
+	}
+	return validCodes[code]
+}
+
 func init() {
 	cobra.OnInitialize(initConfig)
 
 	// Global flags
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.config/sgit/config.yaml)")
+	rootCmd.PersistentFlags().StringVar(&langFlag, "lang", "", "language for AI responses (en|ko|ja|zh|es|fr|de, overrides config setting)")
 }
 
 // initConfig reads in config file and ENV variables if set.

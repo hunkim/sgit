@@ -306,7 +306,7 @@ func analyzeFileWithAI(filename string) (bool, string, error) {
 	apiKey := viper.GetString("upstage_api_key")
 	modelName := viper.GetString("upstage_model_name")
 	
-	client := solar.NewClient(apiKey, modelName)
+	client := solar.NewClient(apiKey, modelName, getEffectiveLanguage())
 	
 	prompt := fmt.Sprintf(`You are a helpful assistant that analyzes files in software projects to determine if they should be added to git version control.
 

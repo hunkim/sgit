@@ -123,7 +123,7 @@ func runCommit(cmd *cobra.Command, args []string) error {
 	apiKey := viper.GetString("upstage_api_key")
 	modelName := viper.GetString("upstage_model_name")
 	
-	client := solar.NewClient(apiKey, modelName)
+	client := solar.NewClient(apiKey, modelName, getEffectiveLanguage())
 	
 	fmt.Println("Generating comprehensive commit message with Solar LLM...")
 	

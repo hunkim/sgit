@@ -141,7 +141,7 @@ func provideMergeConflictHelp(conflictFiles []string) error {
 	apiKey := viper.GetString("upstage_api_key")
 	modelName := viper.GetString("upstage_model_name")
 	
-	client := solar.NewClient(apiKey, modelName)
+	client := solar.NewClient(apiKey, modelName, getEffectiveLanguage())
 	
 	conflictInfo := strings.Join(conflictFiles, "\n")
 	
@@ -168,7 +168,7 @@ func commitMergeWithAIMessage(sourceBranch, targetBranch string) error {
 	apiKey := viper.GetString("upstage_api_key")
 	modelName := viper.GetString("upstage_model_name")
 	
-	client := solar.NewClient(apiKey, modelName)
+	client := solar.NewClient(apiKey, modelName, getEffectiveLanguage())
 	
 	fmt.Println("Generating AI merge commit message...")
 	message, err := client.GenerateMergeCommitMessage(sourceBranch, targetBranch, string(changesOutput))

@@ -2,8 +2,38 @@
 
 # sgit installation script
 # Usage: curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
+# Options:
+#   --no-completion    Skip tab completion setup
 
 set -e
+
+# Parse command line arguments
+SKIP_COMPLETION=false
+for arg in "$@"; do
+    case $arg in
+        --no-completion)
+            SKIP_COMPLETION=true
+            shift
+            ;;
+        --help|-h)
+            echo "sgit installation script"
+            echo ""
+            echo "Usage: $0 [options]"
+            echo ""
+            echo "Options:"
+            echo "  --no-completion    Skip tab completion setup"
+            echo "  --help, -h         Show this help message"
+            echo ""
+            exit 0
+            ;;
+        *)
+            # Unknown option
+            echo "Unknown option: $arg"
+            echo "Use --help for usage information"
+            exit 1
+            ;;
+    esac
+done
 
 # Colors for output
 RED='\033[0;31m'
@@ -176,15 +206,129 @@ verify_installation() {
     if command -v sgit >/dev/null 2>&1; then
         VERSION_OUTPUT=$(sgit --version 2>/dev/null || sgit --help | head -1)
         print_success "sgit is working: $VERSION_OUTPUT"
+        return 0
     else
         print_warning "sgit command not found in PATH"
         if [ -f "$INSTALL_DIR/sgit" ]; then
             print_status "sgit is installed at $INSTALL_DIR/sgit"
             check_path
+            return 1
         else
             print_error "Installation verification failed"
+            return 1
         fi
     fi
+}
+
+# Setup tab completion
+setup_completion() {
+    print_status "Setting up tab completion..."
+    
+    # Skip completion setup if sgit is not in PATH
+    if ! command -v sgit >/dev/null 2>&1; then
+        print_warning "Skipping completion setup - sgit not found in PATH"
+        print_status "Run 'sgit completion --help' after adding sgit to PATH to set up completion manually"
+        return
+    fi
+    
+    # Detect shell
+    if [ -n "$ZSH_VERSION" ]; then
+        SHELL_TYPE="zsh"
+    elif [ -n "$BASH_VERSION" ]; then
+        SHELL_TYPE="bash"
+    else
+        # Try to detect from $SHELL variable
+        case "$SHELL" in
+            */zsh)
+                SHELL_TYPE="zsh"
+                ;;
+            */bash)
+                SHELL_TYPE="bash"
+                ;;
+            */fish)
+                SHELL_TYPE="fish"
+                ;;
+            *)
+                print_warning "Unable to detect shell type for completion setup"
+                print_status "Run 'sgit completion --help' to set up completion manually"
+                return
+                ;;
+        esac
+    fi
+    
+    print_status "Detected shell: $SHELL_TYPE"
+    
+    case "$SHELL_TYPE" in
+        "bash")
+            COMPLETION_DIR="$HOME/.local/share/bash-completion/completions"
+            COMPLETION_FILE="$COMPLETION_DIR/sgit"
+            RC_FILE="$HOME/.bashrc"
+            
+            # Create completion directory
+            mkdir -p "$COMPLETION_DIR"
+            
+            # Generate completion
+            if sgit completion bash > "$COMPLETION_FILE" 2>/dev/null; then
+                print_success "Bash completion installed to $COMPLETION_FILE"
+                print_status "Completion will be available in new bash sessions"
+            else
+                print_warning "Failed to generate bash completion"
+            fi
+            ;;
+            
+        "zsh")
+            COMPLETION_DIR="$HOME/.local/share/zsh/site-functions"
+            COMPLETION_FILE="$COMPLETION_DIR/_sgit"
+            RC_FILE="$HOME/.zshrc"
+            
+            # Create completion directory
+            mkdir -p "$COMPLETION_DIR"
+            
+            # Generate completion
+            if sgit completion zsh > "$COMPLETION_FILE" 2>/dev/null; then
+                print_success "Zsh completion installed to $COMPLETION_FILE"
+                
+                # Add completion directory to fpath if not already there
+                if [ -f "$RC_FILE" ] && ! grep -q "fpath=.*$COMPLETION_DIR" "$RC_FILE" 2>/dev/null; then
+                    echo "" >> "$RC_FILE"
+                    echo "# sgit completion" >> "$RC_FILE"
+                    echo "fpath=(\"$COMPLETION_DIR\" \$fpath)" >> "$RC_FILE"
+                    echo "autoload -U compinit && compinit" >> "$RC_FILE"
+                    print_success "Added completion directory to $RC_FILE"
+                elif [ ! -f "$RC_FILE" ]; then
+                    echo "# sgit completion" > "$RC_FILE"
+                    echo "fpath=(\"$COMPLETION_DIR\" \$fpath)" >> "$RC_FILE"
+                    echo "autoload -U compinit && compinit" >> "$RC_FILE"
+                    print_success "Created $RC_FILE with completion setup"
+                fi
+                
+                print_status "Completion will be available in new zsh sessions"
+            else
+                print_warning "Failed to generate zsh completion"
+            fi
+            ;;
+            
+        "fish")
+            COMPLETION_DIR="$HOME/.config/fish/completions"
+            COMPLETION_FILE="$COMPLETION_DIR/sgit.fish"
+            
+            # Create completion directory
+            mkdir -p "$COMPLETION_DIR"
+            
+            # Generate completion
+            if sgit completion fish > "$COMPLETION_FILE" 2>/dev/null; then
+                print_success "Fish completion installed to $COMPLETION_FILE"
+                print_status "Completion will be available in new fish sessions"
+            else
+                print_warning "Failed to generate fish completion"
+            fi
+            ;;
+            
+        *)
+            print_warning "Unsupported shell for automatic completion setup: $SHELL_TYPE"
+            print_status "Run 'sgit completion --help' to set up completion manually"
+            ;;
+    esac
 }
 
 # Main installation flow
@@ -197,17 +341,41 @@ main() {
     detect_platform
     get_latest_version
     install_binary
-    verify_installation
+    
+    # Try to set up completion if installation was successful
+    if verify_installation; then
+        if [ "$SKIP_COMPLETION" = false ]; then
+            setup_completion
+        else
+            print_status "Skipping completion setup (--no-completion flag used)"
+            print_status "Run 'sgit completion --help' to set up completion manually later"
+        fi
+    fi
     
     echo ""
     print_success "Installation complete!"
     echo ""
-    print_status "Next steps:"
-    echo "  1. Run 'sgit --help' to see available commands"
-    echo "  2. Run 'sgit config' to set up your Upstage API key"
-    echo "  3. Start using sgit just like git: 'sgit status', 'sgit commit', etc."
+    print_status "🎉 sgit is ready to use!"
     echo ""
-    print_status "Get your free API key at: https://console.upstage.ai/"
+    print_status "✨ What's included:"
+    echo "  • AI-powered commit messages"
+    echo "  • Smart diff summaries"  
+    echo "  • Intelligent log analysis"
+    echo "  • Multi-language support (en, ko, ja, zh, es, fr, de)"
+    echo "  • Tab completion for commands and flags"
+    echo ""
+    print_status "🚀 Next steps:"
+    echo "  1. Run 'sgit config' to set up your Upstage API key"
+    echo "  2. Try 'sgit commit -a' for AI-generated commit messages"
+    echo "  3. Use 'sgit --lang ko commit' for Korean responses"
+    echo "  4. Press TAB after 'sgit' to see available commands"
+    echo ""
+    print_status "🔗 Get your free API key at: https://console.upstage.ai/"
+    echo ""
+    print_status "💡 Tips:"
+    echo "  • All git commands work: 'sgit status', 'sgit push', etc."
+    echo "  • Use 'sgit --help' to see all features"
+    echo "  • Restart your shell to enable tab completion"
     echo ""
 }
 

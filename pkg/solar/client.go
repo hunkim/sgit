@@ -18,6 +18,7 @@ type Client struct {
 	apiKey    string
 	modelName string
 	baseURL   string
+	language  string
 }
 
 // Message represents a chat message
@@ -143,15 +144,45 @@ func (s *Spinner) Stop() {
 }
 
 // NewClient creates a new Solar LLM client
-func NewClient(apiKey, modelName string) *Client {
+func NewClient(apiKey, modelName, language string) *Client {
 	if modelName == "" {
 		modelName = "solar-pro2-preview"
+	}
+	if language == "" {
+		language = "English"
 	}
 	return &Client{
 		apiKey:    apiKey,
 		modelName: modelName,
 		baseURL:   "https://api.upstage.ai/v1/chat/completions",
+		language:  language,
 	}
+}
+
+// addLanguageInstruction wraps the prompt with language-specific instructions
+func (c *Client) addLanguageInstruction(prompt string) string {
+	if c.language == "" || c.language == "en" {
+		return prompt
+	}
+	
+	// Map language codes to full names for clearer AI instructions
+	languageNames := map[string]string{
+		"ko": "Korean (한국어)",
+		"ja": "Japanese (日本語)",
+		"zh": "Chinese (中文)",
+		"es": "Spanish (Español)",
+		"fr": "French (Français)",
+		"de": "German (Deutsch)",
+	}
+	
+	languageName, exists := languageNames[c.language]
+	if !exists {
+		// Fallback: use the code as is if not in our map
+		languageName = c.language
+	}
+	
+	languageInstruction := fmt.Sprintf("IMPORTANT: Please respond in %s. All explanations, commit messages, summaries, and analysis should be written in %s.\n\n", languageName, languageName)
+	return languageInstruction + prompt
 }
 
 // GenerateCommitMessage generates a commit message based on the git diff
@@ -178,7 +209,7 @@ Examples:
 
 Respond with only the commit message, no explanations.`, diff)
 
-	return c.GenerateResponse(prompt)
+	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // GenerateComprehensiveCommitMessage generates a comprehensive commit message based on the git diff, branch, recent commits, and file list
@@ -221,7 +252,7 @@ BREAKING CHANGE: description if applicable (only if truly breaking)
 
 Respond with only the commit message, no explanations.`, diff, branch, recentCommits, fileList)
 
-	return c.GenerateResponse(prompt)
+	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // GenerateComprehensiveCommitMessageStream generates a commit message with streaming
@@ -303,7 +334,7 @@ BREAKING CHANGE: description if applicable (only if truly breaking)
 
 Respond with only the commit message, no explanations.`, diff, branch, recentCommits, fileList)
 
-	return c.GenerateResponseStream(prompt)
+	return c.GenerateResponseStream(c.addLanguageInstruction(prompt))
 }
 
 // SummarizeDiff generates a summary of the git diff
@@ -321,7 +352,7 @@ Provide:
 
 Keep it concise but informative.`, diff)
 
-	return c.GenerateResponse(prompt)
+	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // AnalyzeLog generates insights from the git log
@@ -340,7 +371,7 @@ Provide:
 
 Be concise but insightful.`, timeframe, logOutput)
 
-	return c.GenerateResponse(prompt)
+	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // AnalyzeLogStream generates insights from the git log with streaming
@@ -383,7 +414,7 @@ DEVELOPMENT ANALYSIS - Provide comprehensive insights:
 
 Be insightful and actionable. Focus on trends, patterns, and meaningful observations.`, timeframe, logOutput)
 
-	return c.GenerateResponseStream(prompt)
+	return c.GenerateResponseStream(c.addLanguageInstruction(prompt))
 }
 
 // SummarizeDiffStream generates a summary of the git diff with streaming
@@ -429,7 +460,7 @@ CHANGE ANALYSIS - Provide detailed insights:
 
 Be thorough yet concise. Focus on what matters most for understanding the change.`, diff)
 
-	return c.GenerateResponseStream(prompt)
+	return c.GenerateResponseStream(c.addLanguageInstruction(prompt))
 }
 
 // AnalyzeMergeConflicts provides guidance for resolving merge conflicts
@@ -447,7 +478,7 @@ Provide:
 
 Be practical and actionable.`, conflictFiles)
 
-	return c.GenerateResponse(prompt)
+	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // GenerateMergeCommitMessage generates a comprehensive merge commit message
@@ -465,7 +496,7 @@ Create a merge commit message that:
 
 Format as a proper merge commit message.`, sourceBranch, targetBranch, changes)
 
-	return c.GenerateResponse(prompt)
+	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // GenerateResponse sends a prompt to Solar LLM and returns the response
