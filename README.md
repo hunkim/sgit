@@ -220,5 +220,5 @@ MIT License - see [LICENSE](LICENSE) file.
 > **Ready to transform your git workflow?** Try sgit today and never write "fix stuff" again! 🚀
 >
 > ```bash
-> curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
+> curl -fsSL https://bit.ly/sgit-install | bash
 > ``` 
