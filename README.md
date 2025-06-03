@@ -14,8 +14,7 @@ See the power of sgit in action! Here's what happens when you replace `git` with
 
 ### Before (Traditional Git)
 ```bash
-$ git add .
-$ git commit -m "fix stuff"
+$ git commit -m "fix stuff" -a
 [main a1b2c3d] fix stuff
  3 files changed, 47 insertions(+), 12 deletions(-)
 ```
