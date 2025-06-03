@@ -1,0 +1,129 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version to release'
+        required: true
+        default: 'v0.1.0'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+    
+    - name: Set up Go
+      uses: actions/setup-go@v4
+      with:
+        go-version: '1.21'
+    
+    - name: Get version
+      id: version
+      run: |
+        if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+          echo "version=${{ github.event.inputs.version }}" >> $GITHUB_OUTPUT
+        else
+          echo "version=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
+        fi
+    
+    - name: Build binaries
+      run: |
+        VERSION="${{ steps.version.outputs.version }}"
+        mkdir -p dist
+        
+        # Build for multiple platforms
+        PLATFORMS=(
+          "linux/amd64"
+          "linux/arm64"  
+          "linux/arm"
+          "darwin/amd64"
+          "darwin/arm64"
+          "windows/amd64"
+          "windows/arm64"
+        )
+        
+        for platform in "${PLATFORMS[@]}"; do
+          IFS='/' read -r GOOS GOARCH <<< "$platform"
+          
+          output_name="sgit"
+          if [ "$GOOS" = "windows" ]; then
+            output_name="sgit.exe"
+          fi
+          
+          archive_name="sgit_${VERSION}_${GOOS}_${GOARCH}"
+          
+          echo "Building for $GOOS/$GOARCH..."
+          
+          # Build binary
+          env GOOS="$GOOS" GOARCH="$GOARCH" go build \
+            -ldflags="-s -w -X main.version=$VERSION" \
+            -o "dist/$output_name" \
+            .
+          
+          # Create archive
+          cd dist
+          if [ "$GOOS" = "windows" ]; then
+            zip -q "${archive_name}.zip" "$output_name"
+          else
+            tar -czf "${archive_name}.tar.gz" "$output_name"
+          fi
+          rm "$output_name"
+          cd ..
+        done
+        
+        # Generate checksums
+        cd dist
+        sha256sum * > checksums.txt
+        cd ..
+    
+    - name: Create Release
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: ${{ steps.version.outputs.version }}
+        name: Release ${{ steps.version.outputs.version }}
+        draft: false
+        prerelease: false
+        files: |
+          dist/*
+        body: |
+          ## Installation
+          
+          ### Quick Install (Recommended)
+          ```bash
+          curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
+          ```
+          
+          ### Homebrew (macOS/Linux)
+          ```bash
+          brew tap hunkim/sgit
+          brew install sgit
+          ```
+          
+          ### Go Install
+          ```bash
+          go install github.com/hunkim/sgit@${{ steps.version.outputs.version }}
+          ```
+          
+          ### Manual Download
+          Download the appropriate binary for your platform from the assets below.
+          
+          ## What's New
+          
+          - Enhanced AI-powered commit message generation with streaming
+          - Improved git compatibility and passthrough functionality  
+          - Better error handling and user experience
+          - Cross-platform support for Linux, macOS, and Windows
+          
+          ## Checksums
+          
+          See `checksums.txt` for SHA256 verification.
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} 
