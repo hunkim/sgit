@@ -6,8 +6,6 @@ import (
 	"github.com/spf13/cobra"
 )
 
-var version = "0.1" // Will be set during build
-
 // versionCmd represents the version command
 var versionCmd = &cobra.Command{
 	Use:   "version",

@@ -12,6 +12,7 @@ import (
 )
 
 var cfgFile string
+var version = "dev" // Will be set during build with -ldflags
 
 // rootCmd represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
@@ -21,7 +22,7 @@ var rootCmd = &cobra.Command{
 commit messages based on your code changes.`,
 	SilenceUsage:  true,
 	SilenceErrors: true,
-	Version:       "0.1", // Will be set during build
+	Version:       version, // Will be set during build
 }
 
 // executeGitPassthrough passes commands directly to git

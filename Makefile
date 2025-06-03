@@ -13,7 +13,7 @@ GOGET=$(GOCMD) get
 GOMOD=$(GOCMD) mod
 
 # Build flags
-LDFLAGS=-ldflags "-X main.version=$(VERSION)"
+LDFLAGS=-ldflags "-X github.com/hunkim/sgit/cmd.version=$(VERSION)"
 
 .PHONY: all build clean test deps tidy run install
 

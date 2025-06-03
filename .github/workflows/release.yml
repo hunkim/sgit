@@ -64,7 +64,7 @@ jobs:
           
           # Build binary
           env GOOS="$GOOS" GOARCH="$GOARCH" go build \
-            -ldflags="-s -w -X main.version=$VERSION" \
+            -ldflags="-s -w -X github.com/hunkim/sgit/cmd.version=$VERSION" \
             -o "dist/$output_name" \
             .
           
