@@ -375,19 +375,30 @@ Enhanced AI-powered commit message generation with context awareness:
 # - Opens editor with AI-generated message pre-filled
 sgit commit
 
+# Stage all modified files and generate AI commit message
+sgit commit -a
+
+# AI commit with amend (edit previous commit with AI message)
+sgit commit --amend
+
+# AI commit with verbose output
+sgit commit -v
+
+# AI commit with signoff
+sgit commit --signoff
+
 # Skip editor, use AI message with confirmation
 sgit commit --skip-editor
+
+# Stage all files and skip editor (quick workflow)
+sgit commit -a --skip-editor
 
 # Interactive terminal editing of AI message
 sgit commit -i
 
-# Force AI even with other flags
-sgit commit --amend --ai
-
-# Traditional git behavior (no AI)
-sgit commit -m "manual message"
-sgit commit --amend
-sgit commit --no-ai
+# Traditional git behavior (NO AI) - explicit opt-out
+sgit commit -m "manual message"  # Manual message bypasses AI
+sgit commit --no-ai             # Explicit no-AI flag
 ```
 
 ### 3. Intelligent Diff (`sgit diff`)
@@ -463,6 +474,9 @@ sgit log --ai-analysis         # Analyze development patterns
 sgit add --all-ai --force-ai   # Smart add without confirmation
 sgit commit --skip-editor      # AI message with confirmation
 
+# Ultra-quick workflow (stage all modified files + AI commit)
+sgit commit -a --skip-editor   # Stage all & AI commit in one command
+
 # Development analysis workflow
 sgit log --ai-analysis --ai-timeframe "last sprint"
 sgit diff --cached --ai-summary
@@ -470,7 +484,8 @@ sgit merge feature --ai-help --ai-message
 
 # Traditional workflow (no AI at all)
 sgit add .                     # Standard git add
-sgit commit -m "message"       # Standard git commit
+sgit commit -m "message"       # Standard git commit (manual message)
+sgit commit --no-ai            # Standard git commit (explicit no-AI)
 sgit merge feature-branch      # Standard git merge
 ```
 

@@ -72,26 +72,28 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		return fmt.Errorf("not a git repository")
 	}
 
-	// Check if any git-specific flags are set that should bypass AI
-	shouldUseGitDirectly := shouldBypassAI(cmd)
-	
-	if shouldUseGitDirectly && !useAI {
-		// Pass through to git directly with all arguments and flags
+	// Handle -a flag: stage all modified and deleted files first
+	if cmd.Flags().Changed("all") {
+		allFlag, _ := cmd.Flags().GetBool("all")
+		if allFlag {
+			fmt.Println("Staging all modified and deleted files...")
+			stageCmd := exec.Command("git", "add", "-u")
+			if err := stageCmd.Run(); err != nil {
+				return fmt.Errorf("error staging files with -a: %v", err)
+			}
+		}
+	}
+
+	// Only bypass AI in these specific cases:
+	// 1. User provided explicit message with -m
+	// 2. User explicitly disabled AI with --no-ai
+	if commitMessage != "" || skipLLM {
 		return executeGitCommitPassthrough(cmd, args)
 	}
 
-	// AI-enhanced commit logic (only when no conflicting git flags)
+	// AI-enhanced commit logic for ALL other cases
+	// Even with flags like --amend, --verbose, --signoff, etc.
 	
-	// If user provided a message with -m, use it directly
-	if commitMessage != "" {
-		return executeGitCommit(commitMessage)
-	}
-
-	// If skip LLM flag is set, use interactive git commit
-	if skipLLM {
-		return executeGitCommitPassthrough(cmd, args)
-	}
-
 	// Check for staged changes (required for AI generation)
 	hasChanges, err := hasUncommittedChanges()
 	if err != nil {
@@ -178,24 +180,8 @@ func runCommit(cmd *cobra.Command, args []string) error {
 		finalMessage = editedMessage
 	}
 
-	return executeGitCommit(finalMessage)
-}
-
-func shouldBypassAI(cmd *cobra.Command) bool {
-	// Check for flags that indicate user wants standard git behavior
-	flags := []string{
-		"amend", "all", "patch", "verbose", "allow-empty", "allow-empty-message",
-		"signoff", "reset-author", "edit", "no-edit", "file", "template",
-		"fixup", "squash", "author", "date",
-	}
-	
-	for _, flag := range flags {
-		if cmd.Flags().Lookup(flag) != nil && cmd.Flags().Changed(flag) {
-			return true
-		}
-	}
-	
-	return false
+	// Execute git commit with AI message AND any additional flags
+	return executeGitCommitWithFlags(finalMessage, cmd)
 }
 
 func executeGitCommitPassthrough(cobraCmd *cobra.Command, args []string) error {
@@ -365,6 +351,40 @@ func executeGitCommit(message string) error {
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 	return cmd.Run()
+}
+
+// executeGitCommitWithFlags commits with AI message and preserves user's git flags
+func executeGitCommitWithFlags(message string, cobraCmd *cobra.Command) error {
+	// Build git command starting with commit and the AI message
+	gitArgs := []string{"commit", "-m", message}
+	
+	// Add all the git flags that were set (excluding our custom AI flags)
+	cobraCmd.Flags().Visit(func(flag *pflag.Flag) {
+		// Skip our custom sgit flags
+		if flag.Name == "no-ai" || flag.Name == "interactive" || flag.Name == "skip-editor" || flag.Name == "ai" {
+			return
+		}
+		
+		// Skip message flag since we're using the AI-generated message
+		if flag.Name == "message" {
+			return
+		}
+		
+		// Add the flag to git command
+		value := flag.Value.String()
+		if flag.Value.Type() == "bool" && value == "true" {
+			gitArgs = append(gitArgs, "--"+flag.Name)
+		} else if flag.Value.Type() != "bool" && value != "" {
+			gitArgs = append(gitArgs, "--"+flag.Name+"="+value)
+		}
+	})
+	
+	// Execute git command with AI message and all user flags
+	gitCmd := exec.Command("git", gitArgs...)
+	gitCmd.Stdin = os.Stdin
+	gitCmd.Stdout = os.Stdout
+	gitCmd.Stderr = os.Stderr
+	return gitCmd.Run()
 }
 
 func executeInteractiveGitCommit() error {
