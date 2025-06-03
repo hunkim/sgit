@@ -36,7 +36,7 @@ Include comprehensive test coverage for authentication service.
 
 ```bash
 # 1. Install
-curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
+curl -fsSL https://bit.ly/sgit-install | bash
 
 # 2. Use like git, but better
 sgit commit -a        # 🤖 AI writes your commit message
