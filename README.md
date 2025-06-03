@@ -74,7 +74,7 @@ sgit log             # 📈 AI analyzes your patterns
 
 **🚀 Recommended (includes tab completion):**
 ```bash
-curl -fsSL https://raw.githubusercontent.com/hunkim/sgit/main/scripts/install.sh | bash
+curl -fsSL https://bit.ly/sgit-install | bash
 ```
 
 **🍺 Homebrew:**
