@@ -5,6 +5,34 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.1.8] - 2024-12-19
+
+### Added
+- Smart token counting and content limiting for all AI commands
+- Word-based token estimation (1.5 tokens per word for code content)
+- Intelligent content prioritization in commit message generation
+- Real-time word count feedback for diff and log analysis
+- Automatic content truncation with clear user notifications
+
+### Fixed
+- **Critical**: Resolved "context_length_exceeded" errors (65K token limit)
+- All sgit commands now stay within 40K token input limit
+- Improved reliability for large diffs, logs, and merge operations
+
+### Changed
+- Enhanced commit generation with better content distribution:
+  - Diff content: 60% of available tokens (highest priority)
+  - File list: 25% of available tokens
+  - Recent commits: 15% of available tokens
+- Updated file analysis in `sgit add --all-ai` to use word-based limits
+- Consistent truncation notices across all commands
+
+### Technical
+- New `TokenCounter` package for precise Solar Pro tokenizer estimation
+- Word-based truncation with intelligent content splitting
+- Unified token limiting across commit, diff, log, add, and merge commands
+- Conservative token estimation for reliable API usage
+
 ## [0.1.0] - 2024-12-19
 
 ### Added

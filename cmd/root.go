@@ -29,26 +29,26 @@ commit messages based on your code changes.`,
 // executeGitPassthrough passes commands directly to git
 func executeGitPassthrough(args []string) error {
 	gitArgs := append([]string{}, args...)
-	
+
 	gitCmd := exec.Command("git", gitArgs...)
 	gitCmd.Stdin = os.Stdin
 	gitCmd.Stdout = os.Stdout
 	gitCmd.Stderr = os.Stderr
-	
+
 	if err := gitCmd.Run(); err != nil {
 		if exitError, ok := err.(*exec.ExitError); ok {
 			os.Exit(exitError.ExitCode())
 		}
 		os.Exit(1)
 	}
-	
+
 	return nil
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
 func Execute() {
 	err := rootCmd.Execute()
-	
+
 	// If it's an unknown command error, try to pass it through to git
 	if err != nil && strings.Contains(err.Error(), "unknown command") {
 		// Get the original args
@@ -59,7 +59,7 @@ func Execute() {
 			gitCmd.Stdin = os.Stdin
 			gitCmd.Stdout = os.Stdout
 			gitCmd.Stderr = os.Stderr
-			
+
 			if gitErr := gitCmd.Run(); gitErr != nil {
 				if exitError, ok := gitErr.(*exec.ExitError); ok {
 					os.Exit(exitError.ExitCode())
@@ -69,7 +69,7 @@ func Execute() {
 			return // Success
 		}
 	}
-	
+
 	// Handle other errors
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error: %v\n", err)
@@ -88,7 +88,7 @@ func getEffectiveLanguage() string {
 		fmt.Fprintf(os.Stderr, "Warning: Invalid language code '%s'. Using default 'en'.\n", langFlag)
 		return "en"
 	}
-	
+
 	// Fall back to config file setting
 	configLang := viper.GetString("language")
 	if configLang != "" {
@@ -98,7 +98,7 @@ func getEffectiveLanguage() string {
 		}
 		return "en"
 	}
-	
+
 	// Default to English
 	return "en"
 }
@@ -156,4 +156,4 @@ func initConfig() {
 	if err := viper.ReadInConfig(); err == nil {
 		// Config file loaded successfully
 	}
-} 
+}

@@ -1,6 +1,7 @@
 # Variables
 BINARY_NAME=sgit
-VERSION?=v1.0.0
+# Get version from git tag, fallback to dev if no tags
+VERSION?=$(shell git describe --tags --exact-match 2>/dev/null || git describe --tags 2>/dev/null || echo "dev")
 BUILD_DIR=build
 MAIN_PACKAGE=./cmd/main.go
 
@@ -15,14 +16,19 @@ GOMOD=$(GOCMD) mod
 # Build flags
 LDFLAGS=-ldflags "-X github.com/hunkim/sgit/cmd.version=$(VERSION)"
 
-.PHONY: all build clean test deps tidy run install
+.PHONY: all build clean test deps tidy run install dev-build version
 
 # Default target
 all: clean deps test build
 
 # Build the binary
 build:
+	mkdir -p $(BUILD_DIR)
 	$(GOBUILD) $(LDFLAGS) -o $(BUILD_DIR)/$(BINARY_NAME) .
+
+# Build for current development (without creating build dir structure)
+dev-build:
+	$(GOBUILD) $(LDFLAGS) -o $(BINARY_NAME) .
 
 # Clean build files
 clean:
@@ -81,6 +87,10 @@ release: build-all
 dev-setup:
 	$(GOGET) -u github.com/spf13/cobra/cobra
 	$(GOMOD) tidy
+
+# Show detected version
+version:
+	@echo "Detected version: $(VERSION)"
 
 # Quick test build and run
 quick: build
