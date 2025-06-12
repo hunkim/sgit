@@ -1,24 +1,25 @@
 package solar
 
 import (
+	"bufio"
 	"bytes"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
-	"strings"
-	"bufio"
-	"time"
-	"sync"
 	"os"
+	"strings"
+	"sync"
+	"time"
 )
 
 // Client represents the Solar LLM API client
 type Client struct {
-	apiKey    string
-	modelName string
-	baseURL   string
-	language  string
+	apiKey       string
+	modelName    string
+	baseURL      string
+	language     string
+	tokenCounter *TokenCounter
 }
 
 // Message represents a chat message
@@ -77,21 +78,21 @@ type Spinner struct {
 func NewSpinner() *Spinner {
 	// Try to use Unicode spinner if available, fall back to ASCII
 	unicodeSpinner := []string{"⠋", "⠙", "⠹", "⠸", "⠼", "⠴", "⠦", "⠧", "⠇", "⠏"}
-	
+
 	// ASCII fallback spinner
 	asciiSpinner := []string{"|", "/", "-", "\\"}
-	
+
 	// Check if we're likely in a terminal that supports Unicode
 	termType := os.Getenv("TERM")
-	if strings.Contains(termType, "xterm") || strings.Contains(termType, "screen") || 
-	   termType == "" || strings.Contains(termType, "color") {
+	if strings.Contains(termType, "xterm") || strings.Contains(termType, "screen") ||
+		termType == "" || strings.Contains(termType, "color") {
 		return &Spinner{
 			chars:    unicodeSpinner,
 			delay:    100 * time.Millisecond,
 			stopChan: make(chan bool, 1),
 		}
 	}
-	
+
 	// Fall back to ASCII for older/simpler terminals
 	return &Spinner{
 		chars:    asciiSpinner,
@@ -152,10 +153,11 @@ func NewClient(apiKey, modelName, language string) *Client {
 		language = "English"
 	}
 	return &Client{
-		apiKey:    apiKey,
-		modelName: modelName,
-		baseURL:   "https://api.upstage.ai/v1/chat/completions",
-		language:  language,
+		apiKey:       apiKey,
+		modelName:    modelName,
+		baseURL:      "https://api.upstage.ai/v1/chat/completions",
+		language:     language,
+		tokenCounter: NewTokenCounter(),
 	}
 }
 
@@ -164,7 +166,7 @@ func (c *Client) addLanguageInstruction(prompt string) string {
 	if c.language == "" || c.language == "en" {
 		return prompt
 	}
-	
+
 	// Map language codes to full names for clearer AI instructions
 	languageNames := map[string]string{
 		"ko": "Korean (한국어)",
@@ -174,19 +176,22 @@ func (c *Client) addLanguageInstruction(prompt string) string {
 		"fr": "French (Français)",
 		"de": "German (Deutsch)",
 	}
-	
+
 	languageName, exists := languageNames[c.language]
 	if !exists {
 		// Fallback: use the code as is if not in our map
 		languageName = c.language
 	}
-	
+
 	languageInstruction := fmt.Sprintf("IMPORTANT: Please respond in %s. All explanations, commit messages, summaries, and analysis should be written in %s.\n\n", languageName, languageName)
 	return languageInstruction + prompt
 }
 
 // GenerateCommitMessage generates a commit message based on the git diff
 func (c *Client) GenerateCommitMessage(diff string) (string, error) {
+	// Apply word limiting to diff content
+	truncatedDiff, _, _ := c.tokenCounter.TruncateContent(diff)
+
 	prompt := fmt.Sprintf(`You are an expert software developer who writes excellent commit messages following the Conventional Commits specification.
 
 Analyze the following git diff and generate a concise, descriptive commit message:
@@ -207,56 +212,16 @@ Examples:
 - docs: update installation instructions
 - refactor(db): optimize query performance
 
-Respond with only the commit message, no explanations.`, diff)
+Respond with only the commit message, no explanations.`, truncatedDiff)
 
 	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // GenerateComprehensiveCommitMessage generates a comprehensive commit message based on the git diff, branch, recent commits, and file list
 func (c *Client) GenerateComprehensiveCommitMessage(diff, branch, recentCommits, fileList string) (string, error) {
-	prompt := fmt.Sprintf(`You are an expert software developer who writes excellent commit messages following the Conventional Commits specification.
+	// Apply token/word limiting before creating the prompt - reuse the same logic as streaming version
+	truncatedDiff, truncatedBranch, truncatedRecentCommits, truncatedFileList, _ := c.tokenCounter.SplitContent(diff, branch, recentCommits, fileList)
 
-Your task is to analyze the changes and UNDERSTAND THE DEVELOPER'S INTENTION, not just describe what changed.
-
-=== GIT DIFF ===
-%s
-
-=== CURRENT BRANCH ===
-%s
-
-=== RECENT COMMITS (last 5) ===
-%s
-
-=== FILES CHANGED ===
-%s
-
-INTENTION ANALYSIS - Consider:
-1. **Purpose**: Why was this change made? Look for clues in code patterns, branch name, recent commits
-2. **Context**: How does this fit into the larger development story?
-3. **Impact**: What problem does this solve or what improvement does it provide?
-
-Generate a commit message that:
-1. Follows conventional commit format: type(scope): description
-2. CAPTURES THE INTENTION and purpose, not just the mechanics
-3. Uses imperative mood ("add" not "added")
-4. Includes a brief body explaining the WHY and impact
-5. Keep total length between 200-400 characters
-
-Format:
-type(scope): intention-focused summary explaining WHY
-
-Brief explanation of the purpose and impact of this change.
-Focus on the problem solved or improvement made.
-
-BREAKING CHANGE: description if applicable (only if truly breaking)
-
-Respond with only the commit message, no explanations.`, diff, branch, recentCommits, fileList)
-
-	return c.GenerateResponse(c.addLanguageInstruction(prompt))
-}
-
-// GenerateComprehensiveCommitMessageStream generates a commit message with streaming
-func (c *Client) GenerateComprehensiveCommitMessageStream(diff, branch, recentCommits, fileList string) (string, error) {
 	prompt := fmt.Sprintf(`You are an expert software developer who writes excellent commit messages following the Conventional Commits specification.
 
 Your task is to analyze the changes and UNDERSTAND THE DEVELOPER'S INTENTION, not just describe what changed.
@@ -332,13 +297,107 @@ Focus on the problem solved or improvement made, not just what files changed.
 
 BREAKING CHANGE: description if applicable (only if truly breaking)
 
-Respond with only the commit message, no explanations.`, diff, branch, recentCommits, fileList)
+Respond with only the commit message, no explanations.`, truncatedDiff, truncatedBranch, truncatedRecentCommits, truncatedFileList)
+
+	return c.GenerateResponse(c.addLanguageInstruction(prompt))
+}
+
+// GenerateComprehensiveCommitMessageStream generates a commit message with streaming
+func (c *Client) GenerateComprehensiveCommitMessageStream(diff, branch, recentCommits, fileList string) (string, error) {
+	// Apply token/word limiting before creating the prompt
+	truncatedDiff, truncatedBranch, truncatedRecentCommits, truncatedFileList, totalWords := c.tokenCounter.SplitContent(diff, branch, recentCommits, fileList)
+
+	fmt.Printf("📊 Content analysis: %d words total", totalWords)
+	if totalWords > MaxInputWords {
+		fmt.Printf(" (truncated from %d)", c.tokenCounter.CountWords(diff+branch+recentCommits+fileList))
+	}
+	fmt.Println()
+
+	prompt := fmt.Sprintf(`You are an expert software developer who writes excellent commit messages following the Conventional Commits specification.
+
+Your task is to analyze the changes and UNDERSTAND THE DEVELOPER'S INTENTION, not just describe what changed.
+
+=== GIT DIFF ===
+%s
+
+=== CURRENT BRANCH ===
+%s
+
+=== RECENT COMMITS (last 5) ===
+%s
+
+=== FILES CHANGED ===
+%s
+
+INTENTION ANALYSIS - Consider these aspects:
+1. **Purpose**: Why was this change made? (bug fix, new feature, improvement, refactor, etc.)
+2. **Context Clues**: 
+   - Branch name patterns (feature/, fix/, hotfix/, etc.)
+   - File patterns (test files = testing, config files = configuration, etc.)
+   - Code patterns (adding validation = security/reliability, adding logs = debugging, etc.)
+3. **Development Flow**: 
+   - How does this fit with recent commits?
+   - Is this part of a larger feature or fix?
+   - Is this completing something started earlier?
+4. **Impact Intent**:
+   - Performance improvement? Security enhancement? User experience? Developer experience?
+   - Breaking changes? Backward compatibility? API changes?
+5. **Technical Intention**:
+   - Architecture improvements? Code quality? Maintainability?
+   - Integration with external systems? Internal refactoring?
+
+REASONING PATTERNS TO LOOK FOR:
+- Adding tests → ensuring reliability/quality
+- Adding error handling → improving robustness  
+- Adding validation → security/data integrity
+- Adding logging → debugging/monitoring
+- Changing config → deployment/environment setup
+- Updating docs → knowledge sharing/onboarding
+- Refactoring → code quality/maintainability
+- Adding endpoints → new functionality
+- Fixing types → type safety/correctness
+- Adding dependencies → leveraging external capabilities
+
+Generate a commit message that:
+1. Follows conventional commit format: type(scope): description
+2. Types: feat, fix, docs, style, refactor, test, chore, perf, ci, build
+3. CAPTURES THE INTENTION, not just the mechanics
+4. Uses imperative mood ("add" not "added")
+5. Includes a brief body (2-3 lines) explaining:
+   - WHY this change was made (the intention/purpose)
+   - WHAT problem it solves or improvement it provides
+   - HOW it impacts users/developers/system
+6. Mentions breaking changes if applicable
+7. Keep total length between 200-400 characters
+
+Examples of intention-focused messages:
+❌ "feat(api): add new endpoint" (describes mechanics)
+✅ "feat(api): enable user profile customization" (describes intention)
+
+❌ "fix(db): change query" (describes mechanics)  
+✅ "fix(db): prevent memory leak in long-running queries" (describes intention)
+
+❌ "refactor(auth): update code" (describes mechanics)
+✅ "refactor(auth): simplify token validation for better maintainability" (describes intention)
+
+Format:
+type(scope): intention-focused summary that explains WHY
+
+Brief explanation of the purpose and impact of this change.
+Focus on the problem solved or improvement made, not just what files changed.
+
+BREAKING CHANGE: description if applicable (only if truly breaking)
+
+Respond with only the commit message, no explanations.`, truncatedDiff, truncatedBranch, truncatedRecentCommits, truncatedFileList)
 
 	return c.GenerateResponseStream(c.addLanguageInstruction(prompt))
 }
 
 // SummarizeDiff generates a summary of the git diff
 func (c *Client) SummarizeDiff(diff string) (string, error) {
+	// Apply word limiting to diff content
+	truncatedDiff, _, _ := c.tokenCounter.TruncateContent(diff)
+
 	prompt := fmt.Sprintf(`Analyze the following git diff and provide a clear, concise summary of the changes:
 
 %s
@@ -350,13 +409,16 @@ Provide:
 4. **Impact**: Potential effects on functionality
 5. **Notable**: Any important details (breaking changes, performance impacts, etc.)
 
-Keep it concise but informative.`, diff)
+Keep it concise but informative.`, truncatedDiff)
 
 	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // AnalyzeLog generates insights from the git log
 func (c *Client) AnalyzeLog(logOutput, timeframe string) (string, error) {
+	// Apply word limiting to log output
+	truncatedLog, _, _ := c.tokenCounter.TruncateContent(logOutput)
+
 	prompt := fmt.Sprintf(`Analyze the following git log (%s) and provide insights:
 
 %s
@@ -369,13 +431,22 @@ Provide:
 5. **Patterns**: Development patterns, frequency, focus areas
 6. **Recommendations**: Suggestions for the project
 
-Be concise but insightful.`, timeframe, logOutput)
+Be concise but insightful.`, timeframe, truncatedLog)
 
 	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
 
 // AnalyzeLogStream generates insights from the git log with streaming
 func (c *Client) AnalyzeLogStream(logOutput, timeframe string) (string, error) {
+	// Apply word limiting to log output
+	truncatedLog, wordCount, wasTruncated := c.tokenCounter.TruncateContent(logOutput)
+
+	if wasTruncated {
+		fmt.Printf("📊 Log analysis: %d words (truncated from %d words)\n", wordCount, c.tokenCounter.CountWords(logOutput))
+	} else {
+		fmt.Printf("📊 Log analysis: %d words\n", wordCount)
+	}
+
 	prompt := fmt.Sprintf(`Analyze the following git log (%s) and provide detailed insights:
 
 %s
@@ -412,13 +483,22 @@ DEVELOPMENT ANALYSIS - Provide comprehensive insights:
    - Suggested next steps
    - Technical debt considerations
 
-Be insightful and actionable. Focus on trends, patterns, and meaningful observations.`, timeframe, logOutput)
+Be insightful and actionable. Focus on trends, patterns, and meaningful observations.`, timeframe, truncatedLog)
 
 	return c.GenerateResponseStream(c.addLanguageInstruction(prompt))
 }
 
 // SummarizeDiffStream generates a summary of the git diff with streaming
 func (c *Client) SummarizeDiffStream(diff string) (string, error) {
+	// Apply word limiting to diff content
+	truncatedDiff, wordCount, wasTruncated := c.tokenCounter.TruncateContent(diff)
+
+	if wasTruncated {
+		fmt.Printf("📊 Diff analysis: %d words (truncated from %d words)\n", wordCount, c.tokenCounter.CountWords(diff))
+	} else {
+		fmt.Printf("📊 Diff analysis: %d words\n", wordCount)
+	}
+
 	prompt := fmt.Sprintf(`Analyze the following git diff and provide a comprehensive, structured summary:
 
 %s
@@ -458,7 +538,7 @@ CHANGE ANALYSIS - Provide detailed insights:
    - Testing considerations
    - Deployment implications
 
-Be thorough yet concise. Focus on what matters most for understanding the change.`, diff)
+Be thorough yet concise. Focus on what matters most for understanding the change.`, truncatedDiff)
 
 	return c.GenerateResponseStream(c.addLanguageInstruction(prompt))
 }
@@ -483,6 +563,9 @@ Be practical and actionable.`, conflictFiles)
 
 // GenerateMergeCommitMessage generates a comprehensive merge commit message
 func (c *Client) GenerateMergeCommitMessage(sourceBranch, targetBranch, changes string) (string, error) {
+	// Apply word limiting to changes content
+	truncatedChanges, _, _ := c.tokenCounter.TruncateContent(changes)
+
 	prompt := fmt.Sprintf(`Generate a comprehensive merge commit message for merging '%s' into '%s'.
 
 Changes being merged:
@@ -494,7 +577,7 @@ Create a merge commit message that:
 3. Follows conventional commit format if appropriate
 4. Mentions any important notes about the merge
 
-Format as a proper merge commit message.`, sourceBranch, targetBranch, changes)
+Format as a proper merge commit message.`, sourceBranch, targetBranch, truncatedChanges)
 
 	return c.GenerateResponse(c.addLanguageInstruction(prompt))
 }
@@ -551,10 +634,10 @@ func (c *Client) GenerateResponse(prompt string) (string, error) {
 	}
 
 	content := response.Choices[0].Message.Content
-	
+
 	// Clean up the response by removing any <think>...</think> tags
 	content = cleanResponse(content)
-	
+
 	return strings.TrimSpace(content), nil
 }
 
@@ -605,24 +688,24 @@ func (c *Client) GenerateResponseStream(prompt string) (string, error) {
 	var fullContent strings.Builder
 	scanner := bufio.NewScanner(resp.Body)
 	firstChunk := true
-	
+
 	for scanner.Scan() {
 		line := scanner.Text()
 		if line == "" || !strings.HasPrefix(line, "data: ") {
 			continue
 		}
-		
+
 		// Remove "data: " prefix
 		data := strings.TrimPrefix(line, "data: ")
 		if data == "[DONE]" {
 			break
 		}
-		
+
 		var streamResp StreamResponse
 		if err := json.Unmarshal([]byte(data), &streamResp); err != nil {
 			continue // Skip invalid JSON lines
 		}
-		
+
 		if len(streamResp.Choices) > 0 && streamResp.Choices[0].Delta.Content != "" {
 			// Stop spinner on first content chunk and start printing
 			if firstChunk {
@@ -630,23 +713,23 @@ func (c *Client) GenerateResponseStream(prompt string) (string, error) {
 				fmt.Print("Generated commit message: ")
 				firstChunk = false
 			}
-			
+
 			content := streamResp.Choices[0].Delta.Content
 			fmt.Print(content) // Print streaming content immediately
 			fullContent.WriteString(content)
 		}
 	}
-	
+
 	if err := scanner.Err(); err != nil {
 		return "", fmt.Errorf("error reading stream: %v", err)
 	}
-	
+
 	fmt.Println() // Add newline after streaming
-	
+
 	finalContent := fullContent.String()
 	// Clean up the response by removing any <think>...</think> tags
 	finalContent = cleanResponse(finalContent)
-	
+
 	return strings.TrimSpace(finalContent), nil
 }
 
@@ -665,6 +748,6 @@ func cleanResponse(content string) string {
 		end += start + len("</think>")
 		content = content[:start] + content[end:]
 	}
-	
+
 	return strings.TrimSpace(content)
-} 
+}

@@ -37,13 +37,13 @@ when no specific files are given. Supports all git add options for full compatib
 
 func init() {
 	rootCmd.AddCommand(addCmd)
-	
+
 	// AI-specific flags (custom to sgit)
 	addCmd.Flags().BoolVar(&addAll, "all-ai", false, "analyze all untracked files with AI")
 	addCmd.Flags().BoolVar(&addForce, "force-ai", false, "add files without AI confirmation (smart filtering only)")
 	addCmd.Flags().BoolVar(&addDryRun, "dry-run-ai", false, "show what would be added without actually adding")
 	addCmd.Flags().BoolVar(&addAI, "ai", false, "force AI analysis even with specific files")
-	
+
 	// Standard git add flags - we'll pass these through to git
 	addCmd.Flags().BoolP("all", "A", false, "add all changes (git standard)")
 	addCmd.Flags().BoolP("update", "u", false, "update tracked files")
@@ -70,7 +70,7 @@ func runSmartAdd(cmd *cobra.Command, args []string) error {
 
 	// Check if any git-specific flags are set that should bypass AI
 	shouldUseGitDirectly := shouldBypassAIForAdd(cmd)
-	
+
 	// If specific files are provided or git flags are used, use git behavior
 	if (len(args) > 0 && !addAI) || (shouldUseGitDirectly && !addAI) {
 		return executeGitAddPassthrough(cmd, args)
@@ -84,7 +84,7 @@ func runSmartAdd(cmd *cobra.Command, args []string) error {
 	}
 
 	// AI-enhanced add logic (only when explicitly requested)
-	
+
 	// Check configuration and setup if needed (unless in force mode)
 	if !addForce {
 		if err := ensureConfiguration(); err != nil {
@@ -180,27 +180,27 @@ func shouldBypassAIForAdd(cmd *cobra.Command) bool {
 		"intent-to-add", "refresh", "ignore-removal", "pathspec-from-file",
 		"pathspec-file-nul",
 	}
-	
+
 	for _, flag := range flags {
 		if cmd.Flags().Lookup(flag) != nil && cmd.Flags().Changed(flag) {
 			return true
 		}
 	}
-	
+
 	return false
 }
 
 func executeGitAddPassthrough(cobraCmd *cobra.Command, args []string) error {
 	// Build git command with all flags and arguments
 	gitArgs := []string{"add"}
-	
+
 	// Add all the flags that were set (excluding our custom AI flags)
 	cobraCmd.Flags().Visit(func(flag *pflag.Flag) {
 		flagName := flag.Name
 		if strings.HasSuffix(flagName, "-ai") || flagName == "ai" {
 			return // Skip our custom AI flags
 		}
-		
+
 		value := flag.Value.String()
 		if flag.Value.Type() == "bool" && value == "true" {
 			if flag.Shorthand != "" && len(flag.Shorthand) == 1 {
@@ -212,10 +212,10 @@ func executeGitAddPassthrough(cobraCmd *cobra.Command, args []string) error {
 			gitArgs = append(gitArgs, "--"+flagName+"="+value)
 		}
 	})
-	
+
 	// Add any remaining arguments (files)
 	gitArgs = append(gitArgs, args...)
-	
+
 	// Execute git command
 	gitCmd := exec.Command("git", gitArgs...)
 	gitCmd.Stdin = os.Stdin
@@ -297,17 +297,20 @@ func analyzeFileWithAI(filename string) (bool, string, error) {
 		return false, "", fmt.Errorf("error reading file: %v", err)
 	}
 
-	// Limit content size for API (max 4KB)
+	// Use word-based limiting for consistency with other commands
 	contentStr := string(content)
-	if len(contentStr) > 4096 {
-		contentStr = contentStr[:4096] + "\n... [truncated]"
+	// For file analysis, use a smaller limit (5000 words ≈ 7500 tokens)
+	words := len(strings.Fields(contentStr))
+	if words > 5000 {
+		words := strings.Fields(contentStr)
+		contentStr = strings.Join(words[:5000], " ") + "\n... [truncated for size]"
 	}
 
 	apiKey := viper.GetString("upstage_api_key")
 	modelName := viper.GetString("upstage_model_name")
-	
+
 	client := solar.NewClient(apiKey, modelName, getEffectiveLanguage())
-	
+
 	prompt := fmt.Sprintf(`You are a helpful assistant that analyzes files in software projects to determine if they should be added to git version control.
 
 Analyze the following file and determine if it should be added to git:
@@ -334,7 +337,7 @@ Keep the reason under 50 characters.`, filename, contentStr)
 	}
 
 	response = strings.TrimSpace(response)
-	
+
 	if strings.HasPrefix(strings.ToUpper(response), "YES:") {
 		reason := strings.TrimSpace(strings.TrimPrefix(response, "YES:"))
 		if strings.HasPrefix(strings.ToUpper(reason), "YES:") {
@@ -362,11 +365,11 @@ func executeGitAdd(files []string) error {
 	cmd := exec.Command("git", args...)
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
-	
+
 	if err := cmd.Run(); err != nil {
 		return fmt.Errorf("error adding files: %v", err)
 	}
 
 	fmt.Printf("Successfully added %d files\n", len(files))
 	return nil
-} 
+}
